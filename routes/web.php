@@ -63,6 +63,11 @@ Route::get('/test-ipratico/{id}', [couponController::class, 'testIpratico']);
 
 
 
+// Redirect homepage al login se non autenticato
+Route::get('/', function () {
+    return redirect(route('login'));
+})->middleware('guest')->name('home');
+
 // route autenticate
 Route::middleware('auth')->group(function () {
 
