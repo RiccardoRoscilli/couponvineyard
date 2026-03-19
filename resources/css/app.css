@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+[x-cloak] {
+    display: none;
+}
+.spinner {
+    width: 40px;
+    height: 40px;
+    position: relative;
+    margin-left: 620px;
+   /* margin: 100px auto;*/
+  }
+
+  .spinner:before {
+    content: '';
+    box-sizing: border-box;
+    position: absolute;
+   /* margin: 100px auto; */
+    margin-left: 420px; /* Aggiungi questa regola per spostare lo spinner a destra */
+    margin-bottom: 0px;
+    top: 0;
+    left: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 4px solid transparent;
+    border-top-color: #333;
+    border-bottom-color: #333;
+    animation: spinner 0.8s linear infinite;
+  }
+
+  @keyframes spinner {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+@font-face {
+    font-family: "avegasroyale";
+    src: url("../../public/fonts/avegasroyale-regular.ttf");
+}
+
+@layer base {
+    @media only screen and (min-width: 1800px) {
+        #app {
+            width: 100%;
+            height: 100%;
+        }
+    }
+
+    @media only screen and (min-width: 2000px) {
+        main {
+            margin: 0 auto;
+        }
+
+        .nav-content {
+            margin: 0 auto;
+        }
+    }
+
+    @media only screen and (min-width: 2500px) and (max-width: 3000px) {
+        main {
+            width: 70%;
+        }
+
+        .nav-content {
+            width: 70%;
+        }
+    }
+
+    @media only screen and (min-width: 3000px) {
+        main {
+            width: 65%;
+        }
+
+        .nav-content {
+            width: 65%;
+        }
+    }
+
+    @media only screen and (min-width: 4000px) {
+        main {
+            width: 50%;
+        }
+
+        .nav-content {
+            width: 50%;
+        }
+    }
+}
+
