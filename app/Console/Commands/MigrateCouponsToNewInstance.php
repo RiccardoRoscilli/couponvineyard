@@ -94,13 +94,29 @@ class MigrateCouponsToNewInstance extends Command
                     $newClient = IpraticoAPIService::api('POST', 'business-actors', $body, $this->newKey);
 
                     if (isset($newClient->error)) {
-                        $this->error("  ❌ Errore creazione cliente: " . json_encode($newClient->error));
-                        $errors++;
-                        continue;
+                        $errorCode = $newClient->error->code ?? ($newClient->error ?? 'unknown');
+                        if ($errorCode == 412 || str_contains(json_encode($newClient), '412')) {
+                            // Cliente già esiste, recupero l'id cercando per fiscalCode
+                            $this->warn("  ⚠️  Cliente già esiste (412), recupero id...");
+                            sleep(2);
+                            $retrySearch = IpraticoAPIService::api('GET', 'business-actors', ['fiscalCode' => $fiscalCode], $this->newKey);
+                            if (!isset($retrySearch->error) && is_array($retrySearch) && count($retrySearch) > 0) {
+                                $newClientId = $retrySearch[0]->id;
+                                $this->line("  ✓ Cliente recuperato: {$newClientId}");
+                            } else {
+                                $this->error("  ❌ Impossibile recuperare il cliente dopo 412");
+                                $errors++;
+                                continue;
+                            }
+                        } else {
+                            $this->error("  ❌ Errore creazione cliente: " . json_encode($newClient->error));
+                            $errors++;
+                            continue;
+                        }
+                    } else {
+                        $newClientId = $newClient->id;
+                        $this->line("  ✓ Cliente creato: {$newClientId}");
                     }
-
-                    $newClientId = $newClient->id;
-                    $this->line("  ✓ Cliente creato: {$newClientId}");
                 }
             }
 
