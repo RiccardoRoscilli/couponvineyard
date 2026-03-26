@@ -45,6 +45,7 @@ class MigrateCouponsToNewInstance extends Command
 
             // 1. Leggi dati cliente dalla VECCHIA istanza
             $this->line("  → Lettura cliente dalla vecchia istanza...");
+            sleep(2); // Throttling per evitare blocchi iPratico
             $oldClient = IpraticoAPIService::api('GET', 'business-actors/' . $reservation->ipratico_client_id, [], $this->oldKey);
 
             if (isset($oldClient->error)) {
@@ -67,6 +68,7 @@ class MigrateCouponsToNewInstance extends Command
 
             $existingClient = null;
             if ($fiscalCode) {
+                sleep(2);
                 $searchResult = IpraticoAPIService::api('GET', 'business-actors', ['fiscalCode' => $fiscalCode], $this->newKey);
                 if (!isset($searchResult->error) && is_array($searchResult) && count($searchResult) > 0) {
                     $existingClient = $searchResult[0];
@@ -88,6 +90,7 @@ class MigrateCouponsToNewInstance extends Command
                     $this->line("  🔶 DRY RUN: creerebbe cliente con body: " . json_encode($body, JSON_UNESCAPED_UNICODE));
                     $newClientId = 'DRY_RUN_CLIENT_ID';
                 } else {
+                    sleep(2);
                     $newClient = IpraticoAPIService::api('POST', 'business-actors', $body, $this->newKey);
 
                     if (isset($newClient->error)) {
@@ -163,6 +166,7 @@ class MigrateCouponsToNewInstance extends Command
                 $this->line("  🔶 DRY RUN: creerebbe coupon con body: " . json_encode($promoBody, JSON_UNESCAPED_UNICODE));
                 $success++;
             } else {
+                sleep(2);
                 $couponResult = IpraticoAPIService::api('POST', 'promo-codes', $promoBody, $this->newKey);
 
                 if (isset($couponResult->error)) {
