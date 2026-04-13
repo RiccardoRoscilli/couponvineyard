@@ -32,6 +32,7 @@
                 </select>
             </div>
         @endif
+        <a href="{{ route('coupon.export', ['status' => 'In Arrivo']) }}" class="btn btn-success mb-3"><i class="fas fa-file-excel"></i> Esporta Excel</a>
         <table class="table table-bordered yajra-datatable">
             <thead>
                 <tr>

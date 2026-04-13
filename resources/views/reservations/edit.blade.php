@@ -228,6 +228,7 @@
                         @endif
 
                         <button type="submit" name="action" value="salva" class="btn btn-success">Salva</button>
+                        <button type="submit" name="action" value="salva_nota" class="btn btn-warning" formnovalidate>Salva solo nota</button>
 
 
                     </div>

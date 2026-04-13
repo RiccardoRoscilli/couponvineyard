@@ -59,6 +59,7 @@ Route::get('/reservations/successemail', [reservationController::class, 'success
 Route::get('/error-coupon', [reservationController::class, 'errorCoupon'])->name('reservations.errorcoupon');
 Route::post('/send-email', [reservationController::class, 'sendEmail']);
 Route::get('/test-ipratico/{id}', [couponController::class, 'testIpratico']);
+Route::get('/ipratico/coupon/{id}', [couponController::class, 'getIpraticoCoupon']);
 
 
 
@@ -102,6 +103,7 @@ Route::middleware('auth')->group(function () {
 
     });
     Route::post('/regenerate-voucher', [couponController::class, 'regenerateVoucher']);
+    Route::get('coupon/export', [couponController::class, 'exportExcel'])->name('coupon.export');
     Route::get('coupon/{reservation}/edit', [couponController::class, 'edit'])->name('coupon.edit');
     Route::get('coupon/arriving/{reservation}/edit', [couponController::class, 'edit'])->name('coupon.edit');
     Route::get('coupon/used/{reservation}/edit', [couponController::class, 'edit'])->name('coupon.edit');

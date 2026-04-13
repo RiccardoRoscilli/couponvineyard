@@ -218,35 +218,46 @@ class CouponController extends Controller
             $query = Reservation::whereIn('location_id', explode(',', $location_id))
                 ->Where('status', 'LIKE', "%{$status}%")
                 ->where(function ($query) use ($search) {
-                    $query->where('coupon_code', 'LIKE', "%{$search}%")
-                        ->orWhere('cognome_cliente', 'LIKE', "%{$search}%")
-                        ->orWhere('cognome_beneficiario', 'LIKE', "%{$search}%")
-                        ->orWhere('company_cliente', 'LIKE', "%{$search}%")
-                        ->orWhere('cognome_beneficiario', 'LIKE', "%{$search}%")
-                        ->orWhere('n_fattura', 'LIKE', "%{$search}%");
-                    // Aggiungi altre colonne dove cercare, se necessario
+                    $terms = array_filter(explode(' ', $search));
+                    foreach ($terms as $term) {
+                        $query->where(function ($q) use ($term) {
+                            $q->where('coupon_code', 'LIKE', "%{$term}%")
+                                ->orWhere('nome_cliente', 'LIKE', "%{$term}%")
+                                ->orWhere('cognome_cliente', 'LIKE', "%{$term}%")
+                                ->orWhere('company_cliente', 'LIKE', "%{$term}%")
+                                ->orWhere('nome_beneficiario', 'LIKE', "%{$term}%")
+                                ->orWhere('cognome_beneficiario', 'LIKE', "%{$term}%")
+                                ->orWhere('nome_activity', 'LIKE', "%{$term}%")
+                                ->orWhere('email_cliente', 'LIKE', "%{$term}%")
+                                ->orWhere('n_fattura', 'LIKE', "%{$term}%")
+                                ->orWhere('amount', 'LIKE', "%{$term}%");
+                        });
+                    }
                 })
                 ->offset($start)
                 ->limit($limit)
                 ->orderBy($order, $dir);
 
-            $sql = $query->toSql();
-            // dd($sql);
-            $bindings = $query->getBindings();
-            $fullSql = Str::replaceArray('?', $bindings, $sql);
-            // dd($fullSql);
-
             $reservations = $query->get();
 
-            $totalFiltered = Reservation::where('location_id', $location_id)
+            $totalFiltered = Reservation::whereIn('location_id', explode(',', $location_id))
                 ->where('status', $status)
                 ->where(function ($query) use ($search) {
-                    $query->where('coupon_code', 'LIKE', "%{$search}%")
-                        ->orWhere('cognome_cliente', 'LIKE', "%{$search}%")
-                        ->orWhere('cognome_beneficiario', 'LIKE', "%{$search}%")
-                        ->orWhere('company_cliente', 'LIKE', "%{$search}%")
-                        ->orWhere('n_fattura', 'LIKE', "%{$search}%");
-                    // Aggiungi altre colonne dove cercare, se necessario
+                    $terms = array_filter(explode(' ', $search));
+                    foreach ($terms as $term) {
+                        $query->where(function ($q) use ($term) {
+                            $q->where('coupon_code', 'LIKE', "%{$term}%")
+                                ->orWhere('nome_cliente', 'LIKE', "%{$term}%")
+                                ->orWhere('cognome_cliente', 'LIKE', "%{$term}%")
+                                ->orWhere('company_cliente', 'LIKE', "%{$term}%")
+                                ->orWhere('nome_beneficiario', 'LIKE', "%{$term}%")
+                                ->orWhere('cognome_beneficiario', 'LIKE', "%{$term}%")
+                                ->orWhere('nome_activity', 'LIKE', "%{$term}%")
+                                ->orWhere('email_cliente', 'LIKE', "%{$term}%")
+                                ->orWhere('n_fattura', 'LIKE', "%{$term}%")
+                                ->orWhere('amount', 'LIKE', "%{$term}%");
+                        });
+                    }
                 })
                 ->count();
         }
@@ -415,6 +426,7 @@ class CouponController extends Controller
                 $reservation->update([
                     'status' => 'Usufruito',
                 ]);
+                $this->toggleIpraticoActive($reservation, false);
                 break;
             case 'rimetti_attesa':
                 $reservation->update([
@@ -422,10 +434,17 @@ class CouponController extends Controller
                     'orabooking' => null,
                     'status' => 'In Attesa',
                 ]);
+                $this->toggleIpraticoActive($reservation, true);
                 break;
             case 'rimetti_arrivo':
                 $reservation->update([
                     'status' => 'In Arrivo',
+                ]);
+                $this->toggleIpraticoActive($reservation, true);
+                break;
+            case 'salva_nota':
+                $reservation->update([
+                    'note_beneficiario' => $request->note_beneficiario,
                 ]);
                 break;
             case 'salva':
@@ -478,21 +497,36 @@ class CouponController extends Controller
         return redirect()->route($route)->with('success', 'Coupon aggiornato con successo.');
     }
 
-    private function updateIpraticoCoupon($id, $ipratico_id, $coupon_code, $end_date, $ipratico_key)
+    private function toggleIpraticoActive($reservation, $isActive)
+    {
+        if (empty($reservation->ipratico_id)) return;
+
+        $ipratico_key = $reservation->location->ipratico_key;
+        $endDate = Carbon::parse($reservation->data_scadenza)->format('Y-m-d\TH:i:sP');
+
+        $this->updateIpraticoCoupon(
+            $reservation->id,
+            $reservation->ipratico_id,
+            $reservation->coupon_code,
+            $endDate,
+            $ipratico_key,
+            $isActive
+        );
+    }
+
+    private function updateIpraticoCoupon($id, $ipratico_id, $coupon_code, $end_date, $ipratico_key, $isActive = true)
     {
         $reservation = Reservation::find($id);
 
         $client = $reservation->ipratico_client_id;
         $importo = intval($reservation->amount);
         $data_fattura_formattata = Carbon::parse($reservation->data_fattura)->format('Y-m-d');
-        // Recupera i dati della fattura dalla reservation
         $invoiceDetails = [
             "number" => $reservation->invoice_increment,
             "date" => $data_fattura_formattata,
             "line" => 1,
         ];
 
-        // Corpo della richiesta per aggiornare il promo-code
         $promo_body = [
             "name" => $coupon_code,
             "code" => $coupon_code,
@@ -502,7 +536,7 @@ class CouponController extends Controller
                 "isPercentage" => "false",
                 "roundValue" => 0
             ],
-            "isActive" => true,
+            "isActive" => $isActive,
             "validity" => [
                 "endDate" => $end_date
             ],
@@ -511,11 +545,10 @@ class CouponController extends Controller
                     $client
                 ]
             ],
-            "preselectedBusinessActorId" => $reservation->ipratico_client_id, // id del business actor che su ipad si deve associare direttamente alla vendita
-            "invoiceDetails" => $invoiceDetails, // <-- aggiunto qui
+            "preselectedBusinessActorId" => $reservation->ipratico_client_id,
+            "invoiceDetails" => $invoiceDetails,
         ];
        
-        // Chiamata PUT all'API iPratico
         $response = IpraticoAPIService::api('PUT', 'promo-codes/' . $ipratico_id, $promo_body, $ipratico_key);
 
         return $response;
@@ -545,10 +578,10 @@ class CouponController extends Controller
                 $route = 'couponDeleted';
                 break;
         }
-        // soft delete, status cancellato
         $reservation->update([
             'status' => 'Cancellato',
         ]);
+        $this->toggleIpraticoActive($reservation, false);
 
         return redirect()->route($route)->with('success', 'Coupon cancellato.');
     }
@@ -896,8 +929,33 @@ class CouponController extends Controller
             return response()->json(['error' => 'Nessuna risposta da iPratico'], 500);
         }
 
-        // Debug visivo
         return response()->json($iPraticoClient);
+    }
+
+    public function getIpraticoCoupon($id)
+    {
+        $reservation = Reservation::findOrFail($id);
+
+        if (empty($reservation->ipratico_id)) {
+            return response()->json(['error' => 'Coupon senza ipratico_id'], 404);
+        }
+
+        $key = $reservation->location->ipratico_key;
+        $response = IpraticoAPIService::api('GET', 'promo-codes/' . $reservation->ipratico_id, [], $key);
+
+        return response()->json($response);
+    }
+
+    public function exportExcel(Request $request)
+    {
+        $status = $request->input('status', 'In Attesa');
+        $locationId = $request->input('location_id');
+        $filename = 'coupon_' . str_replace(' ', '_', strtolower($status)) . '_' . date('Y-m-d') . '.xlsx';
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\ReservationsExport($status, $locationId, auth()->user()),
+            $filename
+        );
     }
 
 }
