@@ -300,8 +300,10 @@ class reservationController extends Controller
                 ]);
             }
 
-            // Usa activity_value dal JSON se presente, altrimenti product_value dal DB
-            if (isset($activity_data['activity_value']) && $activity_data['activity_value'] > 0) {
+            // Usa invoice_value dal JSON se presente, altrimenti activity_value, altrimenti product_value dal DB
+            if (isset($invoice['invoice_value']) && $invoice['invoice_value'] > 0) {
+                $activity->product_value = $invoice['invoice_value'];
+            } elseif (isset($activity_data['activity_value']) && $activity_data['activity_value'] > 0) {
                 $activity->product_value = $activity_data['activity_value'];
             }
 
