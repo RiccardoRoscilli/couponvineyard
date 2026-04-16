@@ -39,6 +39,17 @@ class clientController extends Controller
                 $body = $this->bodyCreateUpdateBusinessActor($client);
             }
             $iPraticoClient = IpraticoAPIService::api('POST', 'business-actors', $body);
+
+            // Se il POST fallisce (412 = client già esiste), riprova il GET e fai PUT
+            if (isset($iPraticoClient->error) || !isset($iPraticoClient->id)) {
+                Log::info('POST business-actor fallito, riprovo GET per fiscalCode: ' . $client['vat_number']);
+                $iPraticoClient = IpraticoAPIService::api('GET', 'business-actors', array('fiscalCode' => $client['vat_number']));
+                if (isset($iPraticoClient) && !empty($iPraticoClient)) {
+                    $iPraticoClient = $iPraticoClient[0];
+                    $body = $this->bodyCreateUpdateBusinessActor($client, $iPraticoClient->cas);
+                    IpraticoAPIService::api('PUT', 'business-actors/' . $iPraticoClient->id, $body);
+                }
+            }
         } else {
 
             // if the client exists on iPratico, let's take the first one

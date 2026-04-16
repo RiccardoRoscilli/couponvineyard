@@ -300,6 +300,11 @@ class reservationController extends Controller
                 ]);
             }
 
+            // Usa activity_value dal JSON se presente, altrimenti product_value dal DB
+            if (isset($activity_data['activity_value']) && $activity_data['activity_value'] > 0) {
+                $activity->product_value = $activity_data['activity_value'];
+            }
+
             // Se la lingua richiesta è inglese, sovrascrivi i campi dell'attività
             if (($activity_data['activity_language'] ?? 'IT') === 'EN') {
                 $activity->name = $activity->name_en ?? $activity->name;
